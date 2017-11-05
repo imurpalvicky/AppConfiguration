@@ -9,9 +9,10 @@ node{
 def executeBuild() {
 
 	try{
+		println env.WORKSPACE;
 		println env.FIRSTPROPERTY;
 		println env.FIRSTPROPERTY1;
-                println $WORKSPACE
+                
 		
 		}
 		catch(Exception e){
