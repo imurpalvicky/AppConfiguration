@@ -1,0 +1,29 @@
+node{
+   try{	
+		executeBuild();
+   }finally{  
+		deleteDir(); 
+	}
+}
+
+def executeBuild() {
+
+	try{
+		println env.FIRSTPROPERTY;
+		println env.FIRSTPROPERTY1;
+		
+		}
+		catch(Exception e){
+				 return;			
+			}
+			
+}
+			
+		
+
+
+
+
+
+
+
