@@ -1,5 +1,11 @@
+println env.FIRSTPROPERTY;
+println env.FIRSTPROPERTY1;
 node{
+	println env.FIRSTPROPERTY;
+	println env.FIRSTPROPERTY1;
    try{	
+   		println env.FIRSTPROPERTY;
+		println env.FIRSTPROPERTY1;
 		executeBuild();
    }finally{  
 		
