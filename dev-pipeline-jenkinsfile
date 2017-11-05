@@ -9,6 +9,7 @@ node{
 def executeBuild() {
 
 	try{
+	        bat 'dir';
 		println env.WORKSPACE;
 		println env.FIRSTPROPERTY;
 		println env.FIRSTPROPERTY1;
