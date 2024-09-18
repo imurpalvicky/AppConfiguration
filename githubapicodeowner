@@ -1,0 +1,77 @@
+import requests
+import base64
+import os
+
+# Set your GitHub token and repository information
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Set this in environment variables for security
+REPO_OWNER = "your-username-or-organization"
+REPO_NAME = "your-repository"
+BRANCH = "master"
+CODEOWNERS_PATH = ".github/CODEOWNERS"  # Adjust the path if the file is in a different location
+
+# API URL to get the contents of the CODEOWNERS file
+FILE_CONTENTS_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{CODEOWNERS_PATH}?ref={BRANCH}"
+
+# Set up headers with authentication
+headers = {
+    "Authorization": f"token {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github.v3+json"
+}
+
+def get_codeowners_file():
+    """Retrieve the CODEOWNERS file from the repository."""
+    response = requests.get(FILE_CONTENTS_URL, headers=headers)
+    
+    if response.status_code == 200:
+        file_data = response.json()
+        # The content is base64 encoded, so we decode it
+        content = base64.b64decode(file_data["content"]).decode("utf-8")
+        return content
+    elif response.status_code == 404:
+        print("CODEOWNERS file not found in the repository.")
+        return None
+    else:
+        print(f"Failed to retrieve CODEOWNERS file: {response.status_code}")
+        return None
+
+def validate_codeowners(content):
+    """Validate the structure of the CODEOWNERS file."""
+    # Basic validation: Ensure each line follows the format "<pattern> <codeowners>"
+    valid = True
+    lines = content.strip().split("\n")
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Skip comments and empty lines
+        if line.startswith("#") or not line:
+            continue
+        
+        # Check if the line contains at least two fields (a pattern and a code owner)
+        parts = line.split()
+        if len(parts) < 2:
+            print(f"Invalid line: '{line}'")
+            valid = False
+        else:
+            pattern, owners = parts[0], parts[1:]
+            print(f"Pattern: {pattern}, Owners: {owners}")
+
+    return valid
+
+def main():
+    # Get the CODEOWNERS file
+    codeowners_content = get_codeowners_file()
+
+    if codeowners_content:
+        print("CODEOWNERS file found.")
+        # Validate the CODEOWNERS file
+        is_valid = validate_codeowners(codeowners_content)
+        if is_valid:
+            print("The CODEOWNERS file is valid.")
+        else:
+            print("The CODEOWNERS file contains errors.")
+    else:
+        print("No CODEOWNERS file to validate.")
+
+if __name__ == "__main__":
+    main()
