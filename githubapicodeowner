@@ -1,16 +1,16 @@
 import requests
 import base64
 import os
+import csv
 
-# Set your GitHub token and repository information
+# Set your GitHub token and organization information
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Set this in environment variables for security
-REPO_OWNER = "your-username-or-organization"
-REPO_NAME = "your-repository"
-BRANCH = "master"
-CODEOWNERS_PATH = ".github/CODEOWNERS"  # Adjust the path if the file is in a different location
+ORG_NAME = "xyz"  # Replace with your organization name
 
-# API URL to get the contents of the CODEOWNERS file
-FILE_CONTENTS_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{CODEOWNERS_PATH}?ref={BRANCH}"
+# API URL to get repositories in the organization
+REPOS_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
+CODEOWNERS_PATH = ".github/CODEOWNERS"  # Adjust the path if the file is in a different location
+BRANCH = "master"
 
 # Set up headers with authentication
 headers = {
@@ -18,9 +18,22 @@ headers = {
     "Accept": "application/vnd.github.v3+json"
 }
 
-def get_codeowners_file():
-    """Retrieve the CODEOWNERS file from the repository."""
-    response = requests.get(FILE_CONTENTS_URL, headers=headers)
+def get_repositories():
+    """Retrieve all repositories in the organization."""
+    repos = []
+    response = requests.get(REPOS_URL, headers=headers)
+    
+    if response.status_code == 200:
+        repos = response.json()
+    else:
+        print(f"Failed to retrieve repositories: {response.status_code}")
+    
+    return repos
+
+def get_codeowners_file(repo_name):
+    """Retrieve the CODEOWNERS file from a specific repository."""
+    file_contents_url = f"https://api.github.com/repos/{ORG_NAME}/{repo_name}/contents/{CODEOWNERS_PATH}?ref={BRANCH}"
+    response = requests.get(file_contents_url, headers=headers)
     
     if response.status_code == 200:
         file_data = response.json()
@@ -28,10 +41,9 @@ def get_codeowners_file():
         content = base64.b64decode(file_data["content"]).decode("utf-8")
         return content
     elif response.status_code == 404:
-        print("CODEOWNERS file not found in the repository.")
-        return None
+        return None  # File not found
     else:
-        print(f"Failed to retrieve CODEOWNERS file: {response.status_code}")
+        print(f"Failed to retrieve CODEOWNERS file for {repo_name}: {response.status_code}")
         return None
 
 def validate_codeowners(content):
@@ -52,26 +64,46 @@ def validate_codeowners(content):
         if len(parts) < 2:
             print(f"Invalid line: '{line}'")
             valid = False
-        else:
-            pattern, owners = parts[0], parts[1:]
-            print(f"Pattern: {pattern}, Owners: {owners}")
 
     return valid
 
-def main():
-    # Get the CODEOWNERS file
-    codeowners_content = get_codeowners_file()
+def check_repos_for_codeowners():
+    """Check all repositories in the organization for the CODEOWNERS file presence and validity."""
+    repos = get_repositories()
+    results = []
 
-    if codeowners_content:
-        print("CODEOWNERS file found.")
-        # Validate the CODEOWNERS file
-        is_valid = validate_codeowners(codeowners_content)
-        if is_valid:
-            print("The CODEOWNERS file is valid.")
+    for repo in repos:
+        repo_name = repo["name"]
+        print(f"Checking {repo_name}...")
+        
+        # Check if CODEOWNERS file exists
+        codeowners_content = get_codeowners_file(repo_name)
+        if codeowners_content:
+            print(f"CODEOWNERS file found in {repo_name}. Validating...")
+            # Validate the CODEOWNERS file
+            is_valid = validate_codeowners(codeowners_content)
+            results.append([repo_name, "Found", "Valid" if is_valid else "Invalid"])
         else:
-            print("The CODEOWNERS file contains errors.")
-    else:
-        print("No CODEOWNERS file to validate.")
+            print(f"No CODEOWNERS file found in {repo_name}.")
+            results.append([repo_name, "Not Found", "N/A"])
+
+    return results
+
+def write_results_to_csv(results, output_file="codeowners_report.csv"):
+    """Write the results to a CSV file."""
+    with open(output_file, mode="w", newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Repository", "CODEOWNERS File", "Validity"])
+        writer.writerows(results)
+    
+    print(f"Results written to {output_file}")
+
+def main():
+    # Check all repositories for CODEOWNERS presence and validity
+    results = check_repos_for_codeowners()
+    
+    # Write the results to a CSV file
+    write_results_to_csv(results)
 
 if __name__ == "__main__":
     main()
