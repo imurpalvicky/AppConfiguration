@@ -6,11 +6,12 @@ import csv
 # Set your GitHub token and organization information
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Set this in environment variables for security
 ORG_NAME = "xyz"  # Replace with your organization name
+BRANCH = "master"
+CODEOWNERS_PATH = ".github/CODEOWNERS"  # Adjust the path if the file is in a different location
+PER_PAGE = 100  # Max per_page limit is 100
 
 # API URL to get repositories in the organization
 REPOS_URL = f"https://api.github.com/orgs/{ORG_NAME}/repos"
-CODEOWNERS_PATH = ".github/CODEOWNERS"  # Adjust the path if the file is in a different location
-BRANCH = "master"
 
 # Set up headers with authentication
 headers = {
@@ -19,15 +20,25 @@ headers = {
 }
 
 def get_repositories():
-    """Retrieve all repositories in the organization."""
+    """Retrieve all repositories in the organization, handling pagination."""
     repos = []
-    response = requests.get(REPOS_URL, headers=headers)
+    page = 1
     
-    if response.status_code == 200:
-        repos = response.json()
-    else:
-        print(f"Failed to retrieve repositories: {response.status_code}")
+    while True:
+        print(f"Fetching page {page} of repositories...")
+        response = requests.get(f"{REPOS_URL}?per_page={PER_PAGE}&page={page}", headers=headers)
+        
+        if response.status_code == 200:
+            page_repos = response.json()
+            if not page_repos:  # If no repositories on this page, break the loop
+                break
+            repos.extend(page_repos)
+            page += 1
+        else:
+            print(f"Failed to retrieve repositories: {response.status_code}")
+            break
     
+    print(f"Total repositories fetched: {len(repos)}")
     return repos
 
 def get_codeowners_file(repo_name):
