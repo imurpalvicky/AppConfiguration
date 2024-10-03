@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Input comma-separated string
+csv="apple,banana,orange"
+
+# Transform: wrap each item in apostrophes and enclose the entire result in square brackets
+result="[$(echo $csv | sed -e 's/[^,]*/'\''\1'\''/g')]"
+
+# Output the result
+echo $result
+
+
+#!/bin/bash
+
+# Input comma-separated string
+csv="apple,banana,orange"
+
+# Transform: wrap each item in apostrophes and enclose the entire result in square brackets
+result="[$(echo $csv | sed -e "s/[^,]*/'\1'/g")]"
+
+# Output the result
+echo $result
